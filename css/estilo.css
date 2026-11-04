@@ -1,0 +1,52 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #05050f;
+  color: #cfd6ff;
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  position: relative;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* mantém a proporção 960x600 e cabe em qualquer janela */
+canvas {
+  display: block;
+  width: min(100vw, 160vh);
+  aspect-ratio: 960 / 600;
+  background: #05050f;
+}
+
+#ajuda {
+  position: absolute;
+  left: 12px;
+  bottom: 8px;
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+#pausa {
+  position: absolute;
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: 0.2em;
+  pointer-events: none;
+}
+
+#erro {
+  position: absolute;
+  max-width: 80ch;
+  padding: 16px;
+  white-space: pre-wrap;
+  background: #3a0d16;
+  border: 1px solid #ff5470;
+  border-radius: 8px;
+}
+
+[hidden] { display: none !important; }
