@@ -74,4 +74,8 @@ export class Shader {
   setFloat(nome, valor) {
     this.gl.uniform1f(this.local(nome), valor);
   }
+
+  setInt(nome, valor) {
+    this.gl.uniform1i(this.local(nome), valor);
+  }
 }

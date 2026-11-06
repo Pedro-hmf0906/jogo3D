@@ -11,6 +11,7 @@ export class Nave {
   constructor() {
     this.pos = [0, 0, 0];
     this.inclinacao = 0;
+    this.raio = 0.8;
   }
 
   atualizar(dx, dy, dt) {
@@ -24,10 +25,12 @@ export class Nave {
 
 /** Cria um asteroide com posição, modelo, tamanho e giro aleatórios. */
 export function novoAsteroide(z = null) {
+  const tam = aleatorio(0.6, 1.5); // Guardamos o tamanho numa variável primeiro
   return {
     pos: [aleatorio(-7, 7), aleatorio(-4, 4), z === null ? aleatorio(DISTANCIA_SPAWN, -10) : z],
-    tipo: Math.floor(Math.random() * 3),     // qual dos 3 modelos de rocha usar
-    tamanho: aleatorio(0.6, 1.5),
+    tipo: Math.floor(Math.random() * 3),
+    tamanho: tam, 
+    raio: tam * 0.9, // Adicionado: o raio de colisão baseia-se no tamanho visual do asteroide
     giro: [aleatorio(-2, 2), aleatorio(-2, 2)],
     angulo: [0, 0],
   };

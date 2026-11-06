@@ -88,3 +88,32 @@ export function criarCubo(gl) {
 
   return new Mesh(gl, vertices, indices);
 }
+
+/**
+ * Esfera de raio 1 centrada na origem, com normais e coordenadas de textura (u, v).
+ * u vai de 0 a 1 em volta do equador (longitude); v vai de 0 a 1 do polo norte ao sul.
+ * A primeira e a última coluna ficam na mesma posição, mas com u = 0 e u = 1:
+ * é a "emenda" da textura.
+ */
+export function criarEsfera(gl, setores = 48, aneis = 24) {
+  const vertices = [];
+  const indices = [];
+  for (let j = 0; j <= aneis; j++) {
+    const theta = (j / aneis) * Math.PI;
+    for (let i = 0; i <= setores; i++) {
+      const phi = (i / setores) * 2 * Math.PI;
+      const x = Math.sin(theta) * Math.cos(phi);
+      const y = Math.cos(theta);
+      const z = Math.sin(theta) * Math.sin(phi);
+      vertices.push(x, y, z, x, y, z, i / setores, j / aneis);   // posição = normal (raio 1)
+    }
+  }
+  for (let j = 0; j < aneis; j++) {
+    for (let i = 0; i < setores; i++) {
+      const a = j * (setores + 1) + i;
+      const b = a + setores + 1;
+      indices.push(a, b, a + 1, a + 1, b, b + 1);
+    }
+  }
+  return new Mesh(gl, vertices, indices);
+}

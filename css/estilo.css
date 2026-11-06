@@ -50,3 +50,31 @@ canvas {
 }
 
 [hidden] { display: none !important; }
+
+#hud {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: #ff8a8a;
+  pointer-events: none;
+}
+
+#fim {
+  position: absolute;
+  margin: 0;
+  font-size: 56px;
+  letter-spacing: 0.15em;
+  color: #ff5470;
+  text-align: center;
+  pointer-events: none;
+}
+#fim small {
+  display: block;
+  margin-top: 12px;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: #cfd6ff;
+}

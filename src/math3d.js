@@ -16,6 +16,14 @@ export function identidade() {
   return m;
 }
 
+// math3d.js
+export function distancia(v1, v2) {
+    const dx = v1[0] - v2[0];
+    const dy = v1[1] - v2[1];
+    const dz = v1[2] - v2[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
 export function translacao(x, y, z) {
   const m = identidade();
   m[3] = x; m[7] = y; m[11] = z;
