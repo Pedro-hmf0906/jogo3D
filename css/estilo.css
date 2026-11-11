@@ -158,3 +158,95 @@ canvas {
 #carga.recarregando #cargaTxt {
   color: #ffb347;
 }
+
+/* ---------- menu e história ---------- */
+#menu, #historia {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(rgba(5, 5, 15, 0.1), rgba(5, 5, 15, 0.6));
+}
+#menu[hidden], #historia[hidden] { display: none; }
+
+#menu h1 {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 72px);
+  letter-spacing: 0.18em;
+  color: #e8ecff;
+  text-shadow: 0 0 24px #4a6bff;
+}
+.subtitulo {
+  margin: 6px 0 28px;
+  letter-spacing: 0.2em;
+  color: #9fb0ff;
+}
+#opcoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#opcoes li {
+  margin: 6px 0;
+  padding: 8px 34px;
+  font-size: 26px;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  color: #cfd6ff;
+  border-radius: 8px;
+}
+#opcoes li b { color: #ffd479; }
+#opcoes li.sel {
+  color: #fff;
+  background: rgba(74, 107, 255, 0.28);
+  box-shadow: 0 0 18px rgba(74, 107, 255, 0.5);
+}
+#opcoes li.sel::before { content: "▶ "; color: #4dffa0; }
+#difInfo {
+  max-width: 560px;
+  min-height: 2.6em;
+  margin: 14px 0 6px;
+  font-size: 15px;
+  color: #ffd479;
+}
+.dica {
+  margin: 4px 0;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+#historia h2 {
+  margin: 0 0 14px;
+  letter-spacing: 0.2em;
+  color: #e8ecff;
+}
+#historia p {
+  max-width: 620px;
+  margin: 8px 24px;
+  line-height: 1.55;
+  font-size: 17px;
+  color: #cfd6ff;
+}
+#historia button {
+  margin-top: 14px;
+  padding: 8px 26px;
+  font-size: 16px;
+  color: #fff;
+  background: rgba(74, 107, 255, 0.35);
+  border: 1px solid #5f6fc4;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* no menu o HUD do jogo fica escondido */
+body.menu #hud, body.menu #progresso, body.menu #carga, body.menu #ajuda { display: none; }
+
+#pausa small, #fim small {
+  display: block;
+  margin-top: 10px;
+  font-size: 16px;
+  letter-spacing: 0.05em;
+}

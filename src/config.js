@@ -29,6 +29,15 @@ export const DISTANCIA_VISAO = 800.0;      // plano distante da câmera (precisa
 export const VELOCIDADE_TIRO = 70.0;       // unidades por segundo, para frente (-Z)
 export const INTERVALO_TIRO = 0.2;         // segundos entre um tiro e outro dentro de uma rajada
 export const CARGAS_MAX = 3;               // quantos tiros a nave guarda (bateria cheia)
-export const TEMPO_RECARGA = 3;          // segundos para recuperar UM tiro. (CARGAS_MAX = 1 e TEMPO_RECARGA = 3: um tiro de cada vez)
+export const TEMPO_RECARGA = 2.5;          // segundos para recuperar UM tiro. (CARGAS_MAX = 1 e TEMPO_RECARGA = 3: um tiro de cada vez)
 export const ALCANCE_TIRO = 170.0;         // o tiro some depois de percorrer essa distância
 export const PONTOS_ASTEROIDE = 100;
+
+// ---- dificuldades (escolhidas no menu) ----
+// 'normal' usa os valores base definidos acima; as outras variam vidas, tráfego e bateria de tiros.
+export const DIFICULDADES = {
+  facil:   { nome: 'Fácil',   vidas: 5, asteroides: 55,  cargasMax: 4, tempoRecarga: 1.8, mult: 1 },
+  normal:  { nome: 'Normal',  vidas: VIDAS_INICIAIS, asteroides: QTD_ASTEROIDES, cargasMax: CARGAS_MAX, tempoRecarga: TEMPO_RECARGA, mult: 2 },
+  dificil: { nome: 'Difícil', vidas: 2, asteroides: 130, cargasMax: 3, tempoRecarga: 3.2, mult: 3 },
+};
+export const ORDEM_DIFICULDADES = ['facil', 'normal', 'dificil'];

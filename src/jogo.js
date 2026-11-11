@@ -10,9 +10,9 @@
  */
 import {
   COMPRIMENTO_FASE, COR_FUNDO, DISTANCIA_SPAWN, DISTANCIA_VISAO, GATE_ALTURA, GATE_LARGURA,
-  NEBLINA_FIM, NEBLINA_INICIO, QTD_ASTEROIDES, QTD_ESTRELAS, TEMPO_INVULNERAVEL,
-  VELOCIDADE_AVANCO, VIDAS_INICIAIS, Z_DESPAWN,
-  ALCANCE_TIRO, CARGAS_MAX, INTERVALO_TIRO, PONTOS_ASTEROIDE, TEMPO_RECARGA, VELOCIDADE_TIRO,
+  NEBLINA_FIM, NEBLINA_INICIO, QTD_ESTRELAS, TEMPO_INVULNERAVEL,
+  VELOCIDADE_AVANCO, Z_DESPAWN,
+  ALCANCE_TIRO, DIFICULDADES, INTERVALO_TIRO, PONTOS_ASTEROIDE, VELOCIDADE_TIRO,
 } from './config.js';
 import { CameraTerceiraPessoa } from './camera.js';
 import { TECLAS } from './input.js';
@@ -70,18 +70,47 @@ export class Jogo {
       explosao: { pos: [0, 0, 0], forca: 0 },                                 // acende nas batidas
     };
     this.estrelas = Array.from({ length: QTD_ESTRELAS }, () => novaEstrela());
+    // o jogo abre no MENU, com a cena rodando ao fundo (modo demonstração)
+    this.modo = 'menu';                       // 'menu' ou 'jogando'
+    this.dificuldade = 'normal';
+    this.cfg = DIFICULDADES.normal;
     this.reiniciar();
+    this.aplicarModoNaPagina();
+  }
+
+  definirDificuldade(chave) {
+    this.dificuldade = chave;
+    this.cfg = DIFICULDADES[chave];
+  }
+
+  /** Começa uma partida na dificuldade escolhida. */
+  iniciar(chave = this.dificuldade) {
+    this.definirDificuldade(chave);
+    this.modo = 'jogando';
+    this.reiniciar();
+    this.aplicarModoNaPagina();
+  }
+
+  irParaMenu() {
+    this.modo = 'menu';
+    this.reiniciar();
+    this.aplicarModoNaPagina();
+  }
+
+  /** No menu, esconde o HUD (a página ganha a classe 'menu'). */
+  aplicarModoNaPagina() {
+    if (document.body) document.body.className = this.modo === 'menu' ? 'menu' : '';
   }
 
   reiniciar() {
     this.nave = new Nave();
-    this.asteroides = Array.from({ length: QTD_ASTEROIDES }, () => novoAsteroide());
-    this.vidas = VIDAS_INICIAIS;
+    this.asteroides = Array.from({ length: this.cfg.asteroides }, () => novoAsteroide());
+    this.vidas = this.cfg.vidas;
     this.colisoes = 0;
     this.pontos = 0;
     this.tiros = [];         // projéteis no ar
     this.recarga = 0;        // tempo até poder atirar de novo (intervalo dentro da rajada)
-    this.carga = CARGAS_MAX; // bateria: cada tiro gasta 1; vai enchendo com o tempo
+    this.carga = this.cfg.cargasMax; // bateria: cada tiro gasta 1; vai enchendo com o tempo
     this.cargaMostrada = null;
     this.canhao = 1;         // alterna entre o canhão da esquerda e o da direita
     this.distancia = 0;      // quanto a nave já percorreu na fase
@@ -105,6 +134,10 @@ export class Jogo {
 
   /** dt = tempo desde o último quadro, em segundos. */
   atualizar(dt) {
+    if (this.modo === 'menu') {      // modo demonstração: só o cenário se move
+      this.atualizarDemo(dt);
+      return;
+    }
     if (this.fimDeJogo) {            // game over: só os efeitos continuam
       this.atualizarEfeitos(dt);
       return;
@@ -116,7 +149,7 @@ export class Jogo {
     const dy = Number(t.tecla(...TECLAS.cima)) - Number(t.tecla(...TECLAS.baixo));
     this.nave.atualizar(dx, dy, dt);
     this.recarga -= dt;
-    this.carga = Math.min(CARGAS_MAX, this.carga + dt / TEMPO_RECARGA);   // a bateria enche sozinha
+    this.carga = Math.min(this.cfg.cargasMax, this.carga + dt / this.cfg.tempoRecarga);   // a bateria enche sozinha
     if (!this.vitoria && t.tecla(...TECLAS.atirar) && this.recarga <= 0 && this.carga >= 1) this.atirar();
 
     // ---------- ATUALIZAÇÃO ----------
@@ -147,6 +180,18 @@ export class Jogo {
     this.atualizarCarga();
   }
 
+  /** Menu: o cenário continua passando ao fundo, mas sem controle, colisão, tiros nem progresso. */
+  atualizarDemo(dt) {
+    for (const a of this.asteroides) {
+      if (a.ativo === false) continue;
+      a.pos[2] += VELOCIDADE_AVANCO * dt;
+      a.angulo[0] += a.giro[0] * dt;
+      a.angulo[1] += a.giro[1] * dt;
+      if (a.pos[2] > Z_DESPAWN) this.reciclar(a);
+    }
+    this.atualizarEfeitos(dt);
+  }
+
   /** Dispara um projétil: sai de um dos dois canhões (nas asas), alternando. */
   atirar() {
     this.canhao = -this.canhao;
@@ -169,7 +214,7 @@ export class Jogo {
         if (a.ativo === false) continue;
         const acertou = [0, 0.5, 1].some((f) => distancia([b.pos[0], b.pos[1], z0 + (b.pos[2] - z0) * f], a.pos) < a.raio + 0.35);
         if (!acertou) continue;
-        this.pontos += PONTOS_ASTEROIDE;
+        this.pontos += PONTOS_ASTEROIDE * this.cfg.mult;      // a dificuldade multiplica os pontos
         this.tremor = Math.max(this.tremor, 0.15);
         this.explodir(a.pos, 16, [1.0, 0.75, 0.3]);       // asteroide destruído
         this.reciclar(a);
@@ -292,12 +337,12 @@ export class Jogo {
     if (hud) hud.textContent = `Vidas: ${'♥'.repeat(Math.max(0, this.vidas))}   ·   Pontos: ${this.pontos}   ·   Batidas: ${this.colisoes}`;
     if (fim) {
       fim.hidden = !this.fimDeJogo;
-      if (this.fimDeJogo) fim.innerHTML = `GAME OVER<small>Pontos: ${this.pontos}<br>pressione R ou Enter para jogar de novo</small>`;
+      if (this.fimDeJogo) fim.innerHTML = `GAME OVER<small>Pontos: ${this.pontos}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
     }
     if (vit) {
       vit.hidden = !this.vitoria;
       if (this.vitoria) {
-        vit.innerHTML = `VITÓRIA!<small>Pontos: ${this.pontos} · Vidas restantes: ${this.vidas} · Batidas: ${this.colisoes}<br>pressione R ou Enter para jogar de novo</small>`;
+        vit.innerHTML = `VITÓRIA!<small>Pontos: ${this.pontos} · Vidas restantes: ${this.vidas} · Batidas: ${this.colisoes} · ${this.cfg.nome}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
       }
     }
   }
@@ -305,14 +350,15 @@ export class Jogo {
   /** Indicador da bateria: bolinhas = tiros prontos; barra = quanto falta para o próximo. */
   atualizarCarga() {
     const prontas = Math.floor(this.carga + 1e-9);
-    const pct = this.carga >= CARGAS_MAX ? 100 : Math.floor((this.carga - prontas) * 100);
+    const max = this.cfg.cargasMax;
+    const pct = this.carga >= max ? 100 : Math.floor((this.carga - prontas) * 100);
     const chave = `${prontas}:${pct}`;
     if (chave === this.cargaMostrada) return;          // só mexe na página se algo mudou
     this.cargaMostrada = chave;
     const caixa = document.getElementById('carga');
     const texto = document.getElementById('cargaTxt');
     const barra = document.getElementById('cargaCheia');
-    if (texto) texto.textContent = '●'.repeat(prontas) + '○'.repeat(CARGAS_MAX - prontas);
+    if (texto) texto.textContent = '●'.repeat(prontas) + '○'.repeat(max - prontas);
     if (barra) barra.style.width = `${pct}%`;
     if (caixa) caixa.className = prontas >= 1 ? 'pronta' : 'recarregando';
   }
@@ -403,6 +449,8 @@ export class Jogo {
     shader.setFloat('uKs', 0.25);
     for (const a of this.asteroides) {
       if (a.ativo === false) continue;
+      // no menu as rochas desviam da nave parada (não há colisão, então não devem atravessá-la)
+      if (this.modo === 'menu' && Math.abs(a.pos[0]) < 3.2 && Math.abs(a.pos[1]) < 2.4) continue;
       const t = a.tamanho * 2.0;     // os modelos de rocha são pequenos (~0.9)
       shader.setMat4('uModel', multiplicar(
         translacao(...a.pos), rotacaoY(a.angulo[1]), rotacaoX(a.angulo[0]), escala(t, t, t),

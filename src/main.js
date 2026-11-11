@@ -1,10 +1,11 @@
 /**
  * Jogo 3D - Shooter em trilhos (WebGL2)
  *
- * Controles:  WASD ou setas = mover a nave   |   ESPAÇO = atirar   |   ESC = pausar / continuar   |   R ou Enter = reiniciar (após o game over)
+ * Controles:  WASD ou setas = mover a nave   |   ESPAÇO = atirar   |   ESC = pausar / continuar   |   R ou Enter = reiniciar (após o game over)   |   M = menu
  */
 import { ajustarCanvas } from './canvas.js';
 import { Jogo } from './jogo.js';
+import { Menu } from './menu.js';
 import { Teclado } from './input.js';
 import { criarCubo, criarEsfera } from './mesh.js';
 import { carregarObj } from './objLoader.js';
@@ -52,11 +53,19 @@ async function iniciar() {
   }
 
   const jogo = new Jogo(gl, recursos, new Teclado());
+  const menu = new Menu(jogo);          // o jogo abre no menu (jogo.modo === 'menu')
 
   let pausado = false;
   const avisoPausa = document.getElementById('pausa');
   window.addEventListener('keydown', (e) => {
+    if (jogo.modo !== 'jogando') return;        // no menu, quem trata o teclado é o Menu
     if ((e.code === 'KeyR' || e.code === 'Enter') && jogo.terminou) jogo.reiniciar();
+    if (e.code === 'KeyM' && (pausado || jogo.terminou)) {    // volta ao menu
+      pausado = false;
+      avisoPausa.hidden = true;
+      jogo.irParaMenu();
+      menu.abrir();
+    }
     if (e.code === 'Escape' && !e.repeat) {
       pausado = !pausado;
       avisoPausa.hidden = !pausado;

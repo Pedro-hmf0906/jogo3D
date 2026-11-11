@@ -13,9 +13,29 @@
     <p id="hud"></p>
     <div id="carga" class="pronta"><span id="cargaTxt"></span><div id="cargaBarra"><div id="cargaCheia"></div></div></div>
     <div id="progresso"><span id="pct">Chegada: 0%</span><div id="barra"><div id="barraCheia"></div></div></div>
-    <p id="pausa" hidden>PAUSADO</p>
-    <p id="fim" hidden>GAME OVER<small>pressione R ou Enter para jogar de novo</small></p>
+    <p id="pausa" hidden>PAUSADO<small>ESC continua · M volta ao menu</small></p>
+    <p id="fim" hidden>GAME OVER<small>pressione R ou Enter para jogar de novo · M para o menu</small></p>
     <p id="vitoria" hidden></p>
+    <div id="menu">
+      <h1>RUMO A THALASSA</h1>
+      <p class="subtitulo">Uma travessia pelo Cinturão de Kepler</p>
+      <ul id="opcoes">
+        <li data-acao="iniciar">Iniciar</li>
+        <li data-acao="dificuldade">Dificuldade: <b id="difNome">Normal</b></li>
+        <li data-acao="historia">História</li>
+      </ul>
+      <p id="difInfo"></p>
+      <p class="dica">↑ ↓ escolhem &nbsp;·&nbsp; ← → mudam a dificuldade &nbsp;·&nbsp; Enter confirma</p>
+      <p class="dica">No jogo: WASD ou setas movem &nbsp;·&nbsp; ESPAÇO atira &nbsp;·&nbsp; ESC pausa</p>
+    </div>
+    <div id="historia" hidden>
+      <h2>História</h2>
+      <p>Ano 2387. Thalassa, um mundo de oceanos a anos-luz da Terra, está ficando sem energia: o reator que mantém suas cidades flutuantes funcionando depende de cristais raros, e o último carregamento nunca chegou.</p>
+      <p>Você é a piloto-mensageira da <b>Falcão-1</b>, a única nave pequena e veloz o bastante para cruzar o Cinturão de Kepler, um campo de rochas e cristais instáveis que gira em volta de uma estrela velha. Seu canhão funciona com uma bateria que recarrega devagar: cada disparo precisa valer a pena.</p>
+      <p>Atravesse o cinturão, desvie do que não der para destruir e cruze o portal de chegada antes que as luzes de Thalassa se apaguem.</p>
+      <p class="dica">Enter ou Esc para voltar</p>
+      <button id="voltarHistoria" type="button">Voltar</button>
+    </div>
     <pre id="erro" hidden></pre>
   </main>
   <script type="module" src="src/main.js"></script>
