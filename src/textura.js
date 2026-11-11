@@ -52,13 +52,49 @@ function corDoPlaneta(h, y, ruidoFino) {
   return gelo > 0 ? mix3(cor, [0.95, 0.97, 1.0], gelo) : cor;
 }
 
+/** Deserto vermelho (tipo Marte): rochas escuras, poeira clara e calotas pequenas. */
+function corDeserto(h, y, ruidoFino) {
+  const cor = h < 0.45
+    ? mix3([0.28, 0.10, 0.07], [0.62, 0.28, 0.12], h / 0.45)
+    : mix3([0.62, 0.28, 0.12], [0.93, 0.68, 0.42], (h - 0.45) / 0.25);
+  const gelo = (Math.abs(y) - (0.93 + 0.04 * ruidoFino)) / 0.03;
+  return gelo > 0 ? mix3(cor, [0.96, 0.92, 0.88], gelo) : cor;
+}
+
+/** Gigante gasoso violeta: faixas horizontais deformadas pelo ruído e tempestades claras. */
+function corGasoso(h, y, ruidoFino) {
+  const faixa = 0.5 + 0.5 * Math.sin(y * 10 + h * 6);
+  const cor = mix3([0.20, 0.17, 0.48], [0.68, 0.52, 0.86], faixa);
+  return mix3(cor, [0.95, 0.80, 0.92], (ruidoFino - 0.58) * 3);
+}
+
+/** Mundo de gelo: azul-claro com rachaduras escuras. */
+function corGelo(h, y, ruidoFino) {
+  const cor = mix3([0.52, 0.70, 0.90], [0.97, 0.98, 1.0], (h - 0.3) / 0.4);
+  // rachaduras = curvas de nível do relevo (h): linhas contínuas e finas, como gelo trincado
+  const rachadura = Math.abs(h - 0.5) < 0.014 ? 0.5 : Math.abs(h - 0.41) < 0.009 ? 0.72 : 1;
+  const granulado = 0.95 + 0.1 * ruidoFino;
+  return cor.map((c) => c * rachadura * granulado);
+}
+
+/** Superfície do Sol: granulação laranja e amarela, com manchas mais escuras. */
+function corSol(h, y, ruidoFino) {
+  const cor = mix3([0.93, 0.33, 0.04], [1.0, 0.93, 0.55], (h - 0.35) / 0.35);
+  const mancha = Math.max(0, 0.42 - h) * 3;           // pontos mais escuros onde o relevo é baixo
+  return cor.map((c) => c * (0.88 + 0.24 * ruidoFino) * (1 - Math.min(0.6, mancha)));
+}
+
+const COR_POR_TIPO = { terra: corDoPlaneta, deserto: corDeserto, gasoso: corGasoso, gelo: corGelo, sol: corSol };
+export const TIPOS_PLANETA = ['terra', 'deserto', 'gasoso', 'gelo'];
+
 /**
  * Gera os pixels (RGBA) de uma textura de planeta, no formato equirretangular
  * (largura = longitude, altura = latitude). O ruído é calculado em 3D, sobre a
  * superfície da esfera, então não há emenda na borda esquerda/direita
  * nem esticamento nos polos.
  */
-export function gerarPixelsPlaneta(largura = 256, altura = 128) {
+export function gerarPixelsPlaneta(largura = 256, altura = 128, tipo = 'terra') {
+  const corDoTipo = COR_POR_TIPO[tipo];
   const dados = new Uint8Array(largura * altura * 4);
   for (let j = 0; j < altura; j++) {
     const theta = ((j + 0.5) / altura) * Math.PI;          // 0 (polo norte) .. PI (polo sul)
@@ -69,7 +105,7 @@ export function gerarPixelsPlaneta(largura = 256, altura = 128) {
       const z = Math.sin(theta) * Math.sin(phi);
       const h = fractal(x * 2.2 + 7, y * 2.2 + 7, z * 2.2 + 7);
       const fino = fractal(x * 9, y * 9, z * 9, 3);
-      const [r, g, b] = corDoPlaneta(h, y, fino);
+      const [r, g, b] = corDoTipo(h, y, fino);
       const k = (j * largura + i) * 4;
       // um pouco de granulação para a superfície não ficar "lisa demais"
       const gr = 0.92 + 0.16 * fino;
@@ -96,6 +132,6 @@ export function criarTextura(gl, dados, largura, altura) {
   return tex;
 }
 
-export function criarTexturaPlaneta(gl, largura = 256, altura = 128) {
-  return criarTextura(gl, gerarPixelsPlaneta(largura, altura), largura, altura);
+export function criarTexturaPlaneta(gl, tipo = 'terra', largura = 256, altura = 128) {
+  return criarTextura(gl, gerarPixelsPlaneta(largura, altura, tipo), largura, altura);
 }

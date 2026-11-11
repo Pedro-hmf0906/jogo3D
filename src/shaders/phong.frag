@@ -9,6 +9,10 @@ uniform vec3 uCor;       // cor do material
 uniform vec3 uCamPos;    // posição da câmera (para o brilho especular)
 uniform float uBrilho;   // "shininess": quanto maior, menor e mais intenso o brilho
 uniform float uKs;       // intensidade do especular do material
+uniform float uNeblinaIni; // distância em que a neblina começa
+uniform float uNeblinaFim; // distância em que o objeto some por completo
+uniform vec3 uFundo;      // cor do fundo: a neblina de distância mistura os objetos com ela
+uniform float uUsaNeblina; // 0.0 para o céu (sol e planetas distantes não somem na neblina)
 uniform float uSemLuz;   // 1.0 = objeto que emite luz própria (estrelas, partículas)
 uniform float uAmbiente; // quanto de luz ambiente o material recebe
 uniform sampler2D uTextura;   // a textura (imagem "colada" no objeto)
@@ -40,8 +44,14 @@ vec3 phong(vec3 N, vec3 V, vec3 L, vec3 luzCor, vec3 base) {
 }
 
 void main() {
+    // NEBLINA: quanto mais longe da câmera, mais o objeto se funde com o fundo.
+    // Faz os planetas "emergirem do escuro" em vez de aparecerem de repente.
+    float neblina = uUsaNeblina * smoothstep(uNeblinaIni, uNeblinaFim, length(uCamPos - vPosMundo));
+
     if (uSemLuz > 0.5) {
-        FragColor = vec4(uCor, 1.0);
+        // objeto que emite luz: cor própria (ou a textura, no caso do Sol, vezes uCor)
+        vec3 emitida = (uUsaTextura > 0.5) ? texture(uTextura, vUV).rgb * uCor : uCor;
+        FragColor = vec4(mix(emitida, uFundo, neblina), 1.0);
         return;
     }
 
@@ -72,5 +82,5 @@ void main() {
     float attE = 1.0 / (1.0 + 0.05 * de * de);
     cor += attE * phong(N, V, Le, uExplCor, base);
 
-    FragColor = vec4(cor, 1.0);
+    FragColor = vec4(mix(cor, uFundo, neblina), 1.0);
 }

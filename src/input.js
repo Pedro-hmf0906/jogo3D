@@ -7,6 +7,7 @@ export const TECLAS = {
   direita: ['KeyD', 'ArrowRight'],
   cima: ['KeyW', 'ArrowUp'],
   baixo: ['KeyS', 'ArrowDown'],
+  atirar: ['Space'],
 };
 
 const TECLAS_DO_JOGO = new Set(Object.values(TECLAS).flat());

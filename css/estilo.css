@@ -78,3 +78,83 @@ canvas {
   letter-spacing: 0.05em;
   color: #cfd6ff;
 }
+
+#progresso {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 320px;
+  text-align: center;
+  pointer-events: none;
+}
+#pct {
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  color: #9fe8c0;
+}
+#barra {
+  margin-top: 4px;
+  height: 10px;
+  border: 1px solid #5f6fc4;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(10, 12, 30, 0.6);
+}
+#barraCheia {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #3aa0ff, #4dffa0);
+}
+
+#vitoria {
+  position: absolute;
+  margin: 0;
+  font-size: 56px;
+  letter-spacing: 0.15em;
+  color: #4dffa0;
+  text-align: center;
+  pointer-events: none;
+}
+#vitoria small {
+  display: block;
+  margin-top: 12px;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: #cfd6ff;
+}
+
+/* bateria de tiros: bolinhas = tiros prontos; barra = progresso do próximo */
+#carga {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+#cargaTxt {
+  font-size: 22px;
+  letter-spacing: 0.35em;
+  color: #7ff3ff;
+}
+#cargaBarra {
+  width: 170px;
+  height: 8px;
+  margin: 4px auto 0;
+  border: 1px solid #5f6fc4;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(10, 12, 30, 0.6);
+}
+#cargaCheia {
+  height: 100%;
+  width: 0;
+  background: #ffb347;
+}
+#carga.pronta #cargaCheia {
+  background: #4dffa0;
+}
+#carga.recarregando #cargaTxt {
+  color: #ffb347;
+}
