@@ -4,12 +4,12 @@
  * Ideia: a nave fica parada em Z = 0 e o mundo vem na direção dela. Isso dá a impressão
  * de que a nave avança sozinha pelo eixo Z.
  *
- * A fase tem um comprimento (COMPRIMENTO_FASE). Conforme a nave "avança", a distância
+ * A fase tem um comprimento (cfg.comprimento, definido pela dificuldade). Conforme a nave "avança", a distância
  * percorrida cresce até a LINHA DE CHEGADA. O céu (sol e planetas) é fixo e muito distante,
  * e só cresce de leve com o progresso: é o que dá a noção de viagem.
  */
 import {
-  COMPRIMENTO_FASE, COR_FUNDO, DISTANCIA_SPAWN, DISTANCIA_VISAO, GATE_ALTURA, GATE_LARGURA,
+  COR_FUNDO, DISTANCIA_SPAWN, DISTANCIA_VISAO, GATE_ALTURA, GATE_LARGURA,
   NEBLINA_FIM, NEBLINA_INICIO, QTD_ESTRELAS, TEMPO_INVULNERAVEL,
   VELOCIDADE_AVANCO, Z_DESPAWN,
   ALCANCE_TIRO, DIFICULDADES, INTERVALO_TIRO, PONTOS_ASTEROIDE, VELOCIDADE_TIRO,
@@ -128,8 +128,10 @@ export class Jogo {
     this.atualizarCarga();
   }
 
-  get progresso() { return Math.min(1, this.distancia / COMPRIMENTO_FASE); }
-  get distRestante() { return COMPRIMENTO_FASE - this.distancia; }
+  /** Velocidade do mundo (unid./s): a base vezes o ritmo da dificuldade. */
+  get velocidade() { return VELOCIDADE_AVANCO * this.cfg.velocidade; }
+  get progresso() { return Math.min(1, this.distancia / this.cfg.comprimento); }
+  get distRestante() { return this.cfg.comprimento - this.distancia; }
   get terminou() { return this.fimDeJogo || this.vitoria; }
 
   /** dt = tempo desde o último quadro, em segundos. */
@@ -153,10 +155,10 @@ export class Jogo {
     if (!this.vitoria && t.tecla(...TECLAS.atirar) && this.recarga <= 0 && this.carga >= 1) this.atirar();
 
     // ---------- ATUALIZAÇÃO ----------
-    this.distancia += VELOCIDADE_AVANCO * dt;
+    this.distancia += this.velocidade * dt;
     for (const a of this.asteroides) {
       if (a.ativo === false) continue;
-      a.pos[2] += VELOCIDADE_AVANCO * dt;
+      a.pos[2] += this.velocidade * dt;
       a.angulo[0] += a.giro[0] * dt;
       a.angulo[1] += a.giro[1] * dt;
       if (a.pos[2] > Z_DESPAWN) this.reciclar(a);
@@ -165,7 +167,7 @@ export class Jogo {
     this.atualizarTiros(dt);
     if (!this.vitoria) {
       this.verificarColisoes();
-      if (this.distancia >= COMPRIMENTO_FASE) this.vencer();      // cruzou a linha de chegada
+      if (this.distancia >= this.cfg.comprimento) this.vencer();      // cruzou a linha de chegada
     } else {
       this.tempoVitoria += dt;
       this.proximoFogo -= dt;
@@ -184,7 +186,7 @@ export class Jogo {
   atualizarDemo(dt) {
     for (const a of this.asteroides) {
       if (a.ativo === false) continue;
-      a.pos[2] += VELOCIDADE_AVANCO * dt;
+      a.pos[2] += this.velocidade * dt;
       a.angulo[0] += a.giro[0] * dt;
       a.angulo[1] += a.giro[1] * dt;
       if (a.pos[2] > Z_DESPAWN) this.reciclar(a);
@@ -325,7 +327,7 @@ export class Jogo {
     this.particulas = this.particulas.filter((p) => p.vida > 0);
 
     for (const e of this.estrelas) {
-      e.pos[2] += VELOCIDADE_AVANCO * dt;
+      e.pos[2] += this.velocidade * dt;
       if (e.pos[2] > 10) Object.assign(e, novaEstrela(DISTANCIA_SPAWN));
     }
   }
@@ -426,9 +428,9 @@ export class Jogo {
 
     this.desenharCeu();
 
-    // nave: pisca durante a invulnerabilidade e some no game over
+    // nave: pisca durante a invulnerabilidade, some no game over e não aparece no menu
     const piscaOculta = this.invulneravel > 0 && Math.floor(this.invulneravel * 10) % 2 === 0;
-    if (!this.fimDeJogo && !piscaOculta) {
+    if (!this.fimDeJogo && !piscaOculta && this.modo !== 'menu') {
       // O modelo Kenney vem com a frente apontando para +Z; nosso jogo avança para -Z,
       // então giramos 180 graus em Y. Se a nave aparecer "de costas", remova a rotacaoY.
       shader.setMat4('uModel', multiplicar(
@@ -449,8 +451,6 @@ export class Jogo {
     shader.setFloat('uKs', 0.25);
     for (const a of this.asteroides) {
       if (a.ativo === false) continue;
-      // no menu as rochas desviam da nave parada (não há colisão, então não devem atravessá-la)
-      if (this.modo === 'menu' && Math.abs(a.pos[0]) < 3.2 && Math.abs(a.pos[1]) < 2.4) continue;
       const t = a.tamanho * 2.0;     // os modelos de rocha são pequenos (~0.9)
       shader.setMat4('uModel', multiplicar(
         translacao(...a.pos), rotacaoY(a.angulo[1]), rotacaoX(a.angulo[0]), escala(t, t, t),

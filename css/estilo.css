@@ -207,7 +207,7 @@ canvas {
 #opcoes li.sel::before { content: "▶ "; color: #4dffa0; }
 #difInfo {
   max-width: 560px;
-  min-height: 2.6em;
+  min-height: 3.4em;
   margin: 14px 0 6px;
   font-size: 15px;
   color: #ffd479;
