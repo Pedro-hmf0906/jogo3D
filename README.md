@@ -1,81 +1,109 @@
-# Shooter 3D — versão JavaScript / WebGL2
+# Rumo a Thalassa — Shooter 3D em WebGL
 
-Port do projeto `jogo3d` (Python + GLFW + PyOpenGL + NumPy) para o navegador.
-Mesma estrutura de módulos, mesmos nomes de funções (em camelCase), mesma matemática
-e os mesmos shaders — só trocando a "cola" com o sistema (janela, teclado, arquivos).
+Jogo 3D de nave em trilhos (estilo *Star Fox*), feito com **WebGL2 puro** e JavaScript, **sem nenhuma
+biblioteca** (nem three.js, nem de matemática: as matrizes, o leitor de OBJ, os shaders, as texturas e a música
+são código da equipe).
 
-## Como rodar
+**Trabalho 2 — Computação Gráfica (UECE).** Equipe: *[NOME 1], [NOME 2], [NOME 3]*
 
-O jogo carrega os modelos `.obj` e os shaders com `fetch()`, e navegadores **não deixam**
-fazer isso abrindo o `index.html` direto do disco (`file://`). Sirva a pasta com qualquer
-servidor local:
+| | |
+|---|---|
+| 🎮 Jogar online | *[LINK DO GITHUB PAGES]* |
+| 🖥️ Slides | *[LINK DOS SLIDES]* |
+| 🎬 Vídeo de demonstração | *[LINK DO VÍDEO]* |
+
+## História
+
+Ano 2387. Thalassa, um mundo de oceanos, está ficando sem energia. Você pilota a **Falcão-1**, a única nave veloz
+o bastante para cruzar o Cinturão de Kepler, um campo de rochas e cristais instáveis. Desvie dos asteroides,
+destrua o que puder com a bateria de tiros (que recarrega devagar) e **pouse no hangar da nave-mãe Aurora**
+antes que as luzes de Thalassa se apaguem.
+
+## Como rodar (tutorial)
+
+**Não há compilação.** Basta um navegador com WebGL2 (Chrome, Edge, Firefox ou Brave).
+
+**Opção A — online:** abra o link do GitHub Pages acima.
+
+**Opção B — no computador:** o jogo carrega modelos e shaders com `fetch()`, e os navegadores **não permitem isso
+abrindo o `index.html` direto do disco**. Sirva a pasta com um servidor local:
 
 ```bash
-cd jogo3d-webgl
-python -m http.server 8000
+git clone <URL-DESTE-REPOSITORIO>
+cd <pasta-do-repositorio>
+python3 -m http.server 8000        # no Windows: python -m http.server 8000
 ```
 
-Depois abra <http://localhost:8000> (jogo) ou:
+Depois abra <http://localhost:8000>. (No VS Code, a extensão *Live Server* também serve.)
+Se a tela ficar em branco depois de atualizar os arquivos, recarregue com **Ctrl+Shift+R**.
 
-- <http://localhost:8000/estudos/triangulo.html> — estudo 1
-- <http://localhost:8000/estudos/cubo.html> — estudo 2
+## Controles
 
-(No VS Code, a extensão *Live Server* também funciona.)
+| Tecla | Ação |
+|---|---|
+| `W A S D` ou setas | mover a nave |
+| `ESPAÇO` | atirar (cada tiro gasta uma carga da bateria) |
+| `ESC` | pausar / continuar |
+| `M` | voltar ao menu (pausado ou depois do fim da partida) |
+| `R` ou `Enter` | jogar de novo (depois do fim da partida) |
+| `N` | ligar / desligar a música |
 
-**Controles:** `WASD` ou setas = mover a nave · `ESC` = pausar / continuar.
+No menu: `↑ ↓` escolhem, `← →` mudam a dificuldade, `Enter` confirma (o mouse também funciona).
+
+## Dificuldades
+
+| | Fácil | Normal | Difícil |
+|---|---|---|---|
+| Duração da travessia | 45 s | 60 s | 75 s |
+| Ritmo | normal | normal | **rápido (×1,4)** |
+| Vidas | 5 | 3 | 2 |
+| Asteroides | 55 | 90 | 100 |
+| Bateria de tiros | 4 (recarga 1,8 s) | 3 (2,5 s) | 3 (3,2 s) |
+| Pontos por asteroide | ×1 | ×2 | ×3 |
+
+## Requisitos do enunciado → onde estão
+
+| Requisito | Onde |
+|---|---|
+| Projeção perspectiva e câmera | `src/math3d.js` (`perspectiva`, `lookAt`) e `src/camera.js` (3ª pessoa seguindo a nave) |
+| Iluminação de Phong (ambiente + difusa + especular, **por pixel**) | `src/shaders/phong.frag` |
+| Fontes de luz com movimento | `src/jogo.js`: **holofote** preso à nave (cone, vira com a inclinação), **luz de explosão** (acende onde há batida), **Sol** direcional |
+| Objetos animados por transformações geométricas | asteroides (giro e avanço), nave (inclinação nas curvas), planetas e Sol (rotação), partículas e tiros |
+| Objeto com textura | planetas e Sol: texturas procedurais (`src/textura.js`) enviadas com `texImage2D` |
+| Objeto com cor sólida | asteroides (`uCor` no shader) |
+| Leitor de OBJ próprio | `src/objLoader.js` (também lê o `.mtl` com as cores dos materiais) |
+| Teclado / mouse | `src/input.js`, `src/menu.js` |
+| Só WebGL para desenhar | o `canvas` só cria o contexto; todo o desenho é WebGL2 |
 
 ## Estrutura
 
 ```
-jogo3d-webgl/
-├── index.html              página do jogo (um <canvas>)
-├── css/estilo.css
-├── src/
-│   ├── main.js             ponto de entrada: contexto WebGL2, carrega recursos, loop
-│   ├── jogo.js             estado do jogo: atualizar() e desenhar()
-│   ├── entidades.js        Nave e novoAsteroide()
-│   ├── config.js           constantes (limites, velocidades, spawn...)
-│   ├── camera.js           CameraTerceiraPessoa
-│   ├── math3d.js           matrizes 4x4 e vetores
-│   ├── mesh.js             Mesh (VAO/VBO/EBO) e criarCubo()
-│   ├── objLoader.js        leitor de OBJ feito do zero
-│   ├── shader.js           classe Shader (compila e envia uniforms)
-│   ├── input.js            Teclado
-│   ├── canvas.js           ajusta o tamanho do canvas
-│   └── shaders/            basico.vert, basico.frag
-├── assets/models/          modelos .obj (Kenney Space Kit, CC0)
-├── estudos/                triangulo e cubo (passos 1 e 2)
-└── docs/CREDITOS.md
+index.html          página, HUD, menu e telas (HTML por cima do canvas)
+css/estilo.css
+src/
+  main.js           inicialização, loop, pausa, ligação com a música
+  jogo.js           estado do jogo, regras, desenho (céu, nave-mãe, asteroides, partículas)
+  config.js         constantes e presets de dificuldade
+  entidades.js      nave e asteroides
+  camera.js  math3d.js  shader.js  mesh.js  canvas.js  input.js
+  objLoader.js      leitor de OBJ e MTL
+  textura.js        texturas procedurais (planetas e Sol)
+  menu.js           menu: Iniciar, Dificuldade, História
+  musica.js         trilha gerada em tempo real (Web Audio)
+  shaders/          phong.vert, phong.frag
+assets/models/      modelos .obj/.mtl (Kenney, CC0)
+docs/CREDITOS.md
+estudos/            primeiros testes: triângulo e cubo
 ```
 
-## Equivalência Python → JavaScript
+## Observações
 
-| Python | JavaScript |
-|---|---|
-| `main.py` (loop e lógica) | `src/main.js` + `src/jogo.js` + `src/entidades.js` + `src/config.js` |
-| `src/math3d.py` | `src/math3d.js` |
-| `src/camera.py` | `src/camera.js` |
-| `src/mesh.py` | `src/mesh.js` |
-| `src/obj_loader.py` | `src/objLoader.js` |
-| `src/shader.py` | `src/shader.js` |
-| `src/shaders/*.vert/.frag` | `src/shaders/*.vert/.frag` |
-| `estudos/triangulo.py`, `cubo.py` | `estudos/triangulo.js`, `cubo.js` |
+- **HUD, menu e telas são HTML** sobre o canvas (texto e barras). Toda a cena 3D é desenhada só com WebGL.
+- **A música usa a Web Audio API**, que já vem no navegador (sem bibliotecas nem arquivos de áudio).
+- A nave avança sozinha pelo eixo Z e o jogador controla X e Y. O que parece movimento da nave é o mundo vindo
+  na direção dela; o céu (Sol e planetas) é fixo e muito distante.
+- A chegada (a nave-mãe) é feita só com caixas, em código, e o casco recebe a iluminação de Phong.
 
-## O que muda de verdade
+## Créditos
 
-- **WebGL2 em vez de OpenGL 3.3 core.** É o equivalente mais próximo (VAOs, índices de 32 bits,
-  `layout (location = N)`). Nos shaders mudam só as duas primeiras linhas:
-  `#version 330 core` → `#version 300 es` e, no fragment shader, `precision mediump float;`.
-- **Matrizes.** Continuam "por linhas" com vetor coluna (`Proj * View * Model`), como no NumPy.
-  Como o WebGL não aceita `GL_TRUE` (transpor) em `uniformMatrix4fv`, a transposição foi para
-  `paraWebGL()` em `math3d.js`, chamada dentro de `Shader.setMat4`. `A @ B @ C` virou
-  `multiplicar(A, B, C)`.
-- **Sem GLFW.** O `<canvas>` é a janela; `requestAnimationFrame` é o loop; o teclado vem de
-  eventos `keydown`/`keyup` (`input.js`). `glfw.swap_interval(1)` não é necessário: o navegador
-  já sincroniza com o monitor.
-- **ESC** pausa em vez de fechar (uma aba não "fecha" sozinha).
-- **`dt` limitado a 50 ms**, para que voltar de outra aba não faça a nave/asteroides darem um salto.
-- **`phong.vert`/`phong.frag`, `entities.py` e `game.py`** estavam vazios no zip original. Os dois
-  últimos viraram `entidades.js` e `jogo.js` com a lógica que estava no `main.py`; os shaders de Phong
-  não foram portados (não havia código), então ficam para a Semana 3.
-- A pasta `venv/` do zip não entra no projeto JS.
+Modelos 3D: *Space Kit* de [Kenney](https://www.kenney.nl) (CC0). Detalhes em [`docs/CREDITOS.md`](docs/CREDITOS.md).
