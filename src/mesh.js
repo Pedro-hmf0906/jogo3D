@@ -116,7 +116,7 @@ export function criarEsfera(gl, setores = 48, aneis = 24) {
     for (let i = 0; i < setores; i++) {
       const a = j * (setores + 1) + i;
       const b = a + setores + 1;
-      indices.push(a, b, a + 1, a + 1, b, b + 1);
+      indices.push(a, a + 1, b, a + 1, b + 1, b); 
     }
   }
   return new Mesh(gl, vertices, indices);

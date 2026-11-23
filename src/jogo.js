@@ -485,18 +485,52 @@ export class Jogo {
       shader.setFloat('uAmbiente', 0.2);
     }
 
-    // asteroides: cada um com sua própria matriz model
-    shader.setVec3('uCor', [0.7, 0.55, 0.4]);
-    shader.setFloat('uBrilho', 10);     // rochas: brilho fraco e espalhado
+    
+    // Asteroides: cada um com sua própria matriz Model.
+    // Somente o modelo com cristais utiliza as cores do MTL.
+    shader.setFloat('uBrilho', 10);
     shader.setFloat('uKs', 0.25);
+
+    let tipoAnterior = -1;
+
     for (const a of this.asteroides) {
       if (a.ativo === false) continue;
-      const t = a.tamanho * 2.0;     // os modelos de rocha são pequenos (~0.9)
+
+      // Evita reenviar as configurações quando o tipo
+      // do asteroide é igual ao do desenho anterior.
+      if (a.tipo !== tipoAnterior) {
+        const possuiCristais = a.tipo === 2;
+
+        if (possuiCristais) {
+          // Usa as cores armazenadas nos vértices
+          // pelo leitor OBJ/MTL, sem alterar suas cores.
+          shader.setFloat('uUsaCorVertice', 1);
+          shader.setVec3('uCor', [1, 1, 1]);
+        } else {
+          // Mantém a cor sólida dos outros asteroides.
+          shader.setFloat('uUsaCorVertice', 0);
+          shader.setVec3('uCor', [0.7, 0.55, 0.4]);
+        }
+
+        tipoAnterior = a.tipo;
+      }
+
+      const t = a.tamanho * 2.0;
+
       shader.setMat4('uModel', multiplicar(
-        translacao(...a.pos), rotacaoY(a.angulo[1]), rotacaoX(a.angulo[0]), escala(t, t, t),
+        translacao(...a.pos),
+        rotacaoY(a.angulo[1]),
+        rotacaoX(a.angulo[0]),
+        escala(t, t, t),
       ));
+
       this.malhasAsteroides[a.tipo].desenhar();
     }
+
+    // Restaura a cor sólida para a nave-mãe
+    // e os demais objetos desenhados posteriormente.
+    shader.setFloat('uUsaCorVertice', 0);
+
 
     // nave-mãe (a chegada): o casco recebe iluminação (sol e holofote); as luzes emitem a sua própria.
     // Ela some na neblina de longe e só começa a ser desenhada quando está a menos de 450 unidades.
