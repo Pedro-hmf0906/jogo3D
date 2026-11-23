@@ -5,11 +5,11 @@
  * de que a nave avança sozinha pelo eixo Z.
  *
  * A fase tem um comprimento (cfg.comprimento, definido pela dificuldade). Conforme a nave "avança", a distância
- * percorrida cresce até a LINHA DE CHEGADA. O céu (sol e planetas) é fixo e muito distante,
+ * percorrida cresce até a NAVE-MÃE (a chegada). O céu (sol e planetas) é fixo e muito distante,
  * e só cresce de leve com o progresso: é o que dá a noção de viagem.
  */
 import {
-  COR_FUNDO, DISTANCIA_SPAWN, DISTANCIA_VISAO, GATE_ALTURA, GATE_LARGURA,
+  COR_FUNDO, DISTANCIA_SPAWN, DISTANCIA_VISAO, NAVE_MAE,
   NEBLINA_FIM, NEBLINA_INICIO, QTD_ESTRELAS, TEMPO_INVULNERAVEL,
   VELOCIDADE_AVANCO, Z_DESPAWN,
   ALCANCE_TIRO, DIFICULDADES, INTERVALO_TIRO, PONTOS_ASTEROIDE, VELOCIDADE_TIRO,
@@ -122,14 +122,23 @@ export class Jogo {
     this.flash = 0;          // 0..1, fundo avermelhado
     this.particulas = [];
     this.fimDeJogo = false;
+    this.chamaAcc = 0;       // acumulador de partículas da chama dos motores
     this.pctMostrado = -1;
     this.atualizarHud();
     this.atualizarProgresso();
     this.atualizarCarga();
+    this.anunciar(this.modo === 'menu' ? 'menu' : 'jogo');
+  }
+
+  /** Avisa quem estiver ouvindo (a música) que o estado do jogo mudou: 'menu', 'jogo', 'vitoria' ou 'derrota'. */
+  anunciar(estado) {
+    if (this.aoMudarEstado) this.aoMudarEstado(estado);
   }
 
   /** Velocidade do mundo (unid./s): a base vezes o ritmo da dificuldade. */
-  get velocidade() { return VELOCIDADE_AVANCO * this.cfg.velocidade; }
+  get velocidade() { return VELOCIDADE_AVANCO * this.cfg.velocidade * this.freio; }
+  /** 1 = voo normal. Depois da vitória cai a 0 em NAVE_MAE.frenagem segundos: a nave "pousa" no hangar. */
+  get freio() { return this.vitoria ? Math.max(0, 1 - this.tempoVitoria / NAVE_MAE.frenagem) : 1; }
   get progresso() { return Math.min(1, this.distancia / this.cfg.comprimento); }
   get distRestante() { return this.cfg.comprimento - this.distancia; }
   get terminou() { return this.fimDeJogo || this.vitoria; }
@@ -150,6 +159,7 @@ export class Jogo {
     const dx = Number(t.tecla(...TECLAS.direita)) - Number(t.tecla(...TECLAS.esquerda));
     const dy = Number(t.tecla(...TECLAS.cima)) - Number(t.tecla(...TECLAS.baixo));
     this.nave.atualizar(dx, dy, dt);
+    this.emitirChama(dt);
     this.recarga -= dt;
     this.carga = Math.min(this.cfg.cargasMax, this.carga + dt / this.cfg.tempoRecarga);   // a bateria enche sozinha
     if (!this.vitoria && t.tecla(...TECLAS.atirar) && this.recarga <= 0 && this.carga >= 1) this.atirar();
@@ -174,7 +184,7 @@ export class Jogo {
       if (this.tempoVitoria < 4 && this.proximoFogo <= 0) {       // fogos de artifício
         this.proximoFogo = 0.3;
         const cor = CORES_FOGOS[Math.floor(Math.random() * CORES_FOGOS.length)];
-        this.explodir([aleatorio(-9, 9), aleatorio(-4, 6), aleatorio(-30, -12)], 40, cor);
+        this.explodir([aleatorio(-9, 9), aleatorio(-3, 4), aleatorio(-30, -12)], 40, cor);
       }
     }
     this.atualizarEfeitos(dt);       // por último: o holofote segue a nave já movida
@@ -192,6 +202,28 @@ export class Jogo {
       if (a.pos[2] > Z_DESPAWN) this.reciclar(a);
     }
     this.atualizarEfeitos(dt);
+  }
+
+  /**
+   * Chama dos dois motores: a cada quadro saem partículas de trás da nave, que são levadas
+   * para trás (+Z). Como cada partícula fica onde nasceu, o rastro "entorta" quando a nave
+   * vira. Ao pousar na nave-mãe (freio -> 0) a chama diminui.
+   */
+  emitirChama(dt) {
+    this.chamaAcc += dt * 80 * (0.35 + 0.65 * this.freio);
+    const [x, y, z] = this.nave.pos;
+    while (this.chamaAcc >= 1 && this.particulas.length < 700) {
+      this.chamaAcc -= 1;
+      for (const lado of [-1, 1]) {
+        const vida = aleatorio(0.25, 0.45);
+        this.particulas.push({
+          pos: [x + lado * 0.42 + aleatorio(-0.06, 0.06), y - 0.05 + aleatorio(-0.06, 0.06), z + 0.95],
+          vel: [aleatorio(-0.5, 0.5), aleatorio(-0.5, 0.5), aleatorio(5, 9)],
+          vida, vidaMax: vida, tamanho: aleatorio(0.1, 0.2), cor: null,   // cor null = gradiente de fogo
+        });
+      }
+    }
+    if (this.chamaAcc > 5) this.chamaAcc = 0;    // depois de uma pausa longa, não solta uma rajada enorme
   }
 
   /** Dispara um projétil: sai de um dos dois canhões (nas asas), alternando. */
@@ -242,6 +274,7 @@ export class Jogo {
   }
 
   vencer() {
+    this.anunciar('vitoria');
     this.vitoria = true;
     this.tempoVitoria = 0;
     this.proximoFogo = 0;
@@ -268,6 +301,7 @@ export class Jogo {
 
       if (this.vidas <= 0) {
         this.fimDeJogo = true;
+        this.anunciar('derrota');
         this.explodir(this.nave.pos, 60);       // a nave também explode
       }
       this.atualizarHud();
@@ -344,7 +378,7 @@ export class Jogo {
     if (vit) {
       vit.hidden = !this.vitoria;
       if (this.vitoria) {
-        vit.innerHTML = `VITÓRIA!<small>Pontos: ${this.pontos} · Vidas restantes: ${this.vidas} · Batidas: ${this.colisoes} · ${this.cfg.nome}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
+        vit.innerHTML = `VITÓRIA!<small>Pouso concluído na nave-mãe Aurora<br>Pontos: ${this.pontos} · Vidas restantes: ${this.vidas} · Batidas: ${this.colisoes} · ${this.cfg.nome}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
       }
     }
   }
@@ -372,7 +406,7 @@ export class Jogo {
     this.pctMostrado = pct;
     const texto = document.getElementById('pct');
     const barra = document.getElementById('barraCheia');
-    if (texto) texto.textContent = pct >= 100 ? 'CHEGADA!' : `Chegada: ${pct}%`;
+    if (texto) texto.textContent = pct >= 100 ? 'POUSO!' : `Nave-mãe: ${pct}%`;
     if (barra) barra.style.width = `${pct}%`;
   }
 
@@ -425,6 +459,7 @@ export class Jogo {
     shader.setFloat('uUsaTextura', 0);
     shader.setFloat('uUsaNeblina', 1);
     shader.setInt('uTextura', 0);        // a textura fica na unidade 0
+    shader.setFloat('uUsaCorVertice', 0);
 
     this.desenharCeu();
 
@@ -439,10 +474,15 @@ export class Jogo {
         rotacaoY(Math.PI),
         escala(0.8, 0.8, 0.8),
       ));
-      shader.setVec3('uCor', [0.2, 0.6, 1.0]);
-      shader.setFloat('uBrilho', 80);   // nave: brilho forte e concentrado (metálica)
-      shader.setFloat('uKs', 1.0);
+      // a nave usa as cores do .mtl (laranja, cinza e branco); uCor = branco deixa as cores como estão
+      shader.setVec3('uCor', [1, 1, 1]);
+      shader.setFloat('uUsaCorVertice', 1);
+      shader.setFloat('uAmbiente', 0.32);   // a câmera vê a nave por trás: um pouco mais de luz de fundo
+      shader.setFloat('uBrilho', 60);       // brilho metálico
+      shader.setFloat('uKs', 0.8);
       this.malhaNave.desenhar();
+      shader.setFloat('uUsaCorVertice', 0);
+      shader.setFloat('uAmbiente', 0.2);
     }
 
     // asteroides: cada um com sua própria matriz model
@@ -458,12 +498,19 @@ export class Jogo {
       this.malhasAsteroides[a.tipo].desenhar();
     }
 
+    // nave-mãe (a chegada): o casco recebe iluminação (sol e holofote); as luzes emitem a sua própria.
+    // Ela some na neblina de longe e só começa a ser desenhada quando está a menos de 450 unidades.
+    const zNaveMae = -this.distRestante;
+    const naveMaeNoAlcance = zNaveMae > -450;
+    if (naveMaeNoAlcance) {
+      shader.setFloat('uBrilho', 30);
+      shader.setFloat('uKs', 0.35);
+      for (const [xa, xb, ya, yb, za, zb, cor] of this.caixasNaveMae(zNaveMae)) this.desenharCaixa(xa, xb, ya, yb, za, zb, cor);
+    }
+
     // a partir daqui os objetos emitem luz própria (não recebem iluminação)
     shader.setFloat('uSemLuz', 1);
-
-    // linha de chegada: só existe no mundo quando está dentro do alcance de visão
-    const zPortal = -this.distRestante;
-    if (zPortal > DISTANCIA_SPAWN && zPortal < 10) this.desenharLinhaDeChegada(zPortal);
+    if (naveMaeNoAlcance) this.desenharLuzesNaveMae(zNaveMae);
 
     // tiros: feixes compridos e finos, que emitem luz própria
     shader.setVec3('uCor', [0.4, 1.0, 0.85]);
@@ -539,29 +586,98 @@ export class Jogo {
     shader.setVec3('uSolCor', this.luzes.sol.cor);
   }
 
-  /** Portal verde (dois pilares e uma viga) com uma faixa quadriculada: a linha de chegada. */
-  desenharLinhaDeChegada(z) {
-    const { shader, malhaCubo } = this;
-    const cubo = (x, y, w, h, d, cor) => {
-      shader.setVec3('uCor', cor);
-      shader.setMat4('uModel', multiplicar(translacao(x, y, z), escala(w, h, d)));
-      malhaCubo.desenhar();
-    };
-    const pulso = 0.75 + 0.25 * Math.sin(this.tempo * 5);          // brilho pulsando
-    const verde = [0.15 * pulso, 1.0 * pulso, 0.45 * pulso];
-    const m = GATE_LARGURA / 2;
-    const h = GATE_ALTURA / 2;
+  /** Desenha um paralelepípedo (um cubo esticado) entre os cantos (xa,ya,za) e (xb,yb,zb). */
+  desenharCaixa(xa, xb, ya, yb, za, zb, cor) {
+    this.shader.setVec3('uCor', cor);
+    this.shader.setMat4('uModel', multiplicar(
+      translacao((xa + xb) / 2, (ya + yb) / 2, (za + zb) / 2), escala(xb - xa, yb - ya, zb - za),
+    ));
+    this.malhaCubo.desenhar();
+  }
 
-    cubo(-m, 0, 1.2, GATE_ALTURA, 1.2, verde);                      // pilar esquerdo
-    cubo(m, 0, 1.2, GATE_ALTURA, 1.2, verde);                       // pilar direito
-    cubo(0, h, GATE_LARGURA + 1.2, 1.2, 1.2, verde);                // viga de cima
-
-    // faixa quadriculada pendurada na viga: 2 linhas alternando branco e cinza-escuro
-    for (let linha = 0; linha < 2; linha++) {
-      for (let i = 0; i < GATE_LARGURA; i++) {
-        const claro = (i + linha) % 2 === 0;
-        cubo(-m + 0.5 + i, h - 1.1 - linha, 1, 1, 0.4, claro ? [1, 1, 1] : [0.12, 0.12, 0.16]);
+  /**
+   * As caixas do casco da NAVE-MÃE, em coordenadas do mundo. z0 = onde fica a face da frente
+   * (a boca do hangar); o hangar se estende para -Z. Cada item: [xa, xb, ya, yb, za, zb, cor].
+   * Quatro blocos formam um tubo em volta da abertura, então as faces internas do túnel
+   * já têm as normais certas para o Phong iluminar o hangar por dentro.
+   */
+  caixasNaveMae(z0) {
+    const { largura, altura, tunel, hangarLargura, hangarAltura } = NAVE_MAE;
+    const hx = largura / 2, hy = altura / 2, ox = hangarLargura / 2, oy = hangarAltura / 2;
+    const zf = z0, zb = z0 - tunel;
+    const casco = [0.55, 0.60, 0.70], interno = [0.20, 0.22, 0.30];
+    const placaA = [0.68, 0.72, 0.82], placaB = [0.45, 0.50, 0.60];
+    const e = 0.3;       // espessura do revestimento interno
+    const c = [
+      // tubo do hangar: esquerda, direita, cima e baixo da abertura
+      [-hx, -ox, -hy, hy, zb, zf, casco], [ox, hx, -hy, hy, zb, zf, casco],
+      [-ox, ox, oy, hy, zb, zf, casco], [-ox, ox, -hy, -oy, zb, zf, casco],
+      // revestimento escuro por dentro do túnel
+      [-ox, -ox + e, -oy, oy, zb, zf, interno], [ox - e, ox, -oy, oy, zb, zf, interno],
+      [-ox, ox, oy - e, oy, zb, zf, interno], [-ox, ox, -oy, -oy + e, zb, zf, interno],
+      // parede do fundo do hangar
+      [-hx, hx, -hy, hy, zb - 4, zb, interno],
+      // torre de comando com duas antenas, aparecendo acima da face da frente
+      [-10, 10, hy, hy + 14, z0 - 44, z0 - 12, casco],
+      [-7.5, -6, hy + 14, hy + 30, z0 - 30, z0 - 28.5, placaB], [6, 7.5, hy + 14, hy + 30, z0 - 30, z0 - 28.5, placaB],
+      // aletas laterais
+      [hx, hx + 22, -3, 3, z0 - 64, z0 - 8, placaB], [-hx - 22, -hx, -3, 3, z0 - 64, z0 - 8, placaB],
+    ];
+    // placas em relevo na frente: dão textura de "chapas" ao casco
+    for (const lado of [-1, 1]) {
+      for (let r = 0; r < 3; r++) {
+        const ya = -hy + 2 + r * 15;
+        const xs = lado < 0 ? [-hx + 2, -ox - 2] : [ox + 2, hx - 2];
+        c.push([xs[0], xs[1], ya, ya + 13, zf, zf + 0.5, (r + (lado > 0 ? 1 : 0)) % 2 ? placaA : placaB]);
       }
     }
+    return c;
+  }
+
+  /** As luzes da nave-mãe (emitem luz própria): moldura, faróis, janelas e as luzes guia do hangar. */
+  desenharLuzesNaveMae(z0) {
+    const { largura, altura, tunel, hangarLargura, hangarAltura } = NAVE_MAE;
+    const hy = altura / 2, ox = hangarLargura / 2, oy = hangarAltura / 2;
+    const zb = z0 - tunel;
+    const luz = (x, y, z, w, h, d, cor) => this.desenharCaixa(x - w / 2, x + w / 2, y - h / 2, y + h / 2, z - d / 2, z + d / 2, cor);
+    const pulso = 0.7 + 0.3 * Math.sin(this.tempo * 4);
+    const pisca = Math.floor(this.tempo * 2) % 2;
+
+    // moldura laranja em volta da boca do hangar
+    const laranja = [1.0 * pulso, 0.55 * pulso, 0.1 * pulso];
+    luz(0, oy + 0.5, z0 + 0.6, hangarLargura + 2, 1, 0.5, laranja);
+    luz(0, -oy - 0.5, z0 + 0.6, hangarLargura + 2, 1, 0.5, laranja);
+    luz(-ox - 0.5, 0, z0 + 0.6, 1, hangarAltura, 0.5, laranja);
+    luz(ox + 0.5, 0, z0 + 0.6, 1, hangarAltura, 0.5, laranja);
+
+    // faróis nos quatro cantos, piscando em pares alternados
+    [[-1, 1], [1, -1], [-1, -1], [1, 1]].forEach(([sx, sy], i) => {
+      const ligado = (i < 2 ? pisca : 1 - pisca) === 1;
+      luz(sx * (ox + 2), sy * (oy + 2), z0 + 0.8, 1.4, 1.4, 1.0, ligado ? [1, 0.2, 0.2] : [0.25, 0.05, 0.05]);
+    });
+
+    // janelas nas chapas da frente (algumas apagadas)
+    for (const lado of [-1, 1]) {
+      for (let r = 0; r < 3; r++) {
+        for (let k = 0; k < 6; k++) {
+          const apagada = (r * 6 + k + (lado > 0 ? 3 : 0)) % 4 === 0;
+          luz(lado * (ox + 4 + k * 3.8), -hy + 8.5 + r * 15, z0 + 0.7, 2.2, 1.2, 0.3, apagada ? [0.25, 0.22, 0.12] : [1.0, 0.88, 0.5]);
+        }
+      }
+    }
+
+    // luzes guia no chão do hangar: "correm" na direção do fundo, mostrando por onde entrar
+    for (let k = 0; k < Math.floor((tunel - 3) / 4); k++) {
+      const b = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(this.tempo * 6 - k * 0.7));
+      for (const lado of [-1, 1]) luz(lado * (ox - 0.8), -oy + 0.45, z0 - 3 - k * 4, 0.5, 0.3, 1.4, [0.2 * b, 1.0 * b, 0.75 * b]);
+    }
+    // luzes de teto
+    for (let k = 0; k < Math.floor((tunel - 8) / 9) + 1; k++) luz(0, oy - 0.45, z0 - 8 - k * 9, 3.5, 0.25, 1.1, [0.75, 0.82, 1.0]);
+    // painel brilhante na parede do fundo e a plataforma de pouso no chão, onde a nave para
+    // (ela freia 22 a 32 unidades depois da boca, conforme a dificuldade)
+    luz(0, 0, zb + 0.15, 14, 7, 0.3, [0.25 * pulso, 0.7 * pulso, 1.0 * pulso]);
+    luz(0, -oy + 0.35, z0 - 27, 12, 0.1, 12, [0.1 * pulso, 0.4 * pulso, 0.9 * pulso]);
+    // pontas das antenas, piscando
+    for (const sx of [-1, 1]) luz(sx * 6.5, hy + 30.5, z0 - 29.5, 1.2, 1.2, 1.2, pisca ? [1, 0.2, 0.2] : [0.3, 0.05, 0.05]);
   }
 }

@@ -15,8 +15,13 @@ export const QTD_ESTRELAS = 160;
 
 // ---- fase e linha de chegada ----
 // (o comprimento da fase depende da dificuldade: veja DIFICULDADES, no fim deste arquivo)
-export const GATE_LARGURA = 18;            // largura do portal da linha de chegada
-export const GATE_ALTURA = 11;
+// A "linha de chegada" é a boca do hangar de uma nave-mãe gigante (feita de caixas, em jogo.js).
+export const NAVE_MAE = {
+  largura: 84, altura: 48,                 // tamanho da face da frente da nave-mãe
+  hangarLargura: 24, hangarAltura: 13,     // abertura do hangar (a área de jogo é 9 x 5,6: dá para entrar sem errar)
+  tunel: 52,                               // comprimento do hangar, da boca até a parede do fundo
+  frenagem: 2.5,                           // segundos que o mundo leva para parar depois da vitória (o "pouso")
+};
 
 // ---- distância de visão e neblina ----
 // A neblina mistura os objetos com o fundo entre INICIO e FIM (distância da câmera).
@@ -40,13 +45,14 @@ export const PONTOS_ASTEROIDE = 100;
 //   comprimento (calculado) = duracao x velocidade do mundo = distância até a linha de chegada
 // Com o ritmo mais rápido, o Difícil usa menos asteroides: a velocidade já faz mais deles
 // chegarem por segundo (100 asteroides a 1,4x equivalem a ~7,6 por segundo; Normal, ~4,9).
-const fase = (duracao, velocidade) => ({
-  duracao, velocidade, ritmo: velocidade > 1 ? 'rápido' : 'normal',
+//   bpm        = andamento da música de fundo (batidas por minuto)
+const fase = (duracao, velocidade, bpm) => ({
+  duracao, velocidade, bpm, ritmo: velocidade > 1 ? 'rápido' : 'normal',
   comprimento: duracao * VELOCIDADE_AVANCO * velocidade,
 });
 export const DIFICULDADES = {
-  facil:   { nome: 'Fácil',   ...fase(45, 1.0), vidas: 5, asteroides: 55,  cargasMax: 4, tempoRecarga: 1.8, mult: 1 },
-  normal:  { nome: 'Normal',  ...fase(60, 1.0), vidas: VIDAS_INICIAIS, asteroides: QTD_ASTEROIDES, cargasMax: CARGAS_MAX, tempoRecarga: TEMPO_RECARGA, mult: 2 },
-  dificil: { nome: 'Difícil', ...fase(75, 1.4), vidas: 2, asteroides: 100, cargasMax: 3, tempoRecarga: 3.2, mult: 3 },
+  facil:   { nome: 'Fácil',   ...fase(45, 1.0, 72), vidas: 5, asteroides: 55,  cargasMax: 4, tempoRecarga: 1.8, mult: 1 },
+  normal:  { nome: 'Normal',  ...fase(60, 1.0, 84), vidas: VIDAS_INICIAIS, asteroides: QTD_ASTEROIDES, cargasMax: CARGAS_MAX, tempoRecarga: TEMPO_RECARGA, mult: 2 },
+  dificil: { nome: 'Difícil', ...fase(75, 1.4, 104), vidas: 2, asteroides: 100, cargasMax: 3, tempoRecarga: 3.2, mult: 3 },
 };
 export const ORDEM_DIFICULDADES = ['facil', 'normal', 'dificil'];

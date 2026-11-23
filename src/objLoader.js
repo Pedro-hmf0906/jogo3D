@@ -10,13 +10,20 @@
  *
  * O OBJ guarda posição, textura e normal em listas separadas e as faces apenas
  * apontam para elas. A placa de vídeo quer tudo junto em cada vértice, então o
- * leitor monta o array final:  x y z | nx ny nz | u v   (8 números por vértice).
+ * leitor monta o array final:  x y z | nx ny nz | u v | r g b   (11 números por vértice).
+ *
+ * O .mtl (arquivo de materiais) diz a cor de cada material:
+ *     newmtl nome     -> começa um material
+ *     Kd r g b        -> cor difusa do material
+ * No .obj, 'usemtl nome' vale para as faces seguintes. Cada vértice recebe a cor do
+ * seu material (branco se o modelo não tiver .mtl).
  *
  * O que este leitor trata:
  *   - faces com 3 ou mais vértices (polígonos viram triângulos em "leque")
  *   - índices negativos (contam a partir do fim da lista)
  *   - modelos sem normais: calcula a normal de cada face (visual "facetado")
  *   - modelos sem textura: usa (0, 0)
+ *   - cores por material (.mtl), lidas por lerMtl()
  *
  * lerObj() só trabalha com texto (não precisa de WebGL), por isso dá para testar
  * no Node. carregarObj() faz o fetch e cria a Mesh.
@@ -50,10 +57,29 @@ function lerVerticeFace(texto, nPos, nTex, nNor) {
   return [vi, vti, vni];
 }
 
+/** Lê o texto de um .mtl e devolve { nomeDoMaterial: [r, g, b] } (usando a linha Kd de cada um). */
+export function lerMtl(texto) {
+  const materiais = {};
+  let atual = null;
+  for (const linhaBruta of texto.split('\n')) {
+    const partes = linhaBruta.trim().split(/\s+/);
+    if (partes[0] === 'newmtl') atual = partes[1];
+    else if (partes[0] === 'Kd' && atual) materiais[atual] = partes.slice(1, 4).map(decimal);
+  }
+  return materiais;
+}
+
+/** Procura no texto do .obj a linha 'mtllib arquivo.mtl' e devolve o nome (ou null). */
+export function nomeDoMtl(textoObj) {
+  const linha = textoObj.split('\n').find((l) => l.trim().startsWith('mtllib '));
+  return linha ? linha.trim().split(/\s+/)[1] : null;
+}
+
 /** Lê o texto de um .obj e devolve { vertices: Float32Array, indices: Uint32Array }. */
-export function lerObj(texto, nome = 'obj') {
+export function lerObj(texto, nome = 'obj', materiais = {}) {
   const posicoes = [], texturas = [], normais = [];
-  const vertices = [];      // lista de [x y z nx ny nz u v]
+  const vertices = [];      // lista de [x y z nx ny nz u v r g b]
+  let material = null;      // material em uso (muda a cada 'usemtl')
   const indices = [];
   const cache = new Map();  // "v/vt/vn" -> índice já criado (evita duplicar vértices)
 
@@ -70,16 +96,18 @@ export function lerObj(texto, nome = 'obj') {
         texturas.push(partes.slice(1, 3).map(decimal));
       } else if (etiqueta === 'vn') {
         normais.push(partes.slice(1, 4).map(decimal));
+      } else if (etiqueta === 'usemtl') {
+        material = partes[1];
       } else if (etiqueta === 'f') {
         const cantos = partes.slice(1).map((p) =>
           lerVerticeFace(p, posicoes.length, texturas.length, normais.length));
         // polígono -> triângulos em leque: (0,1,2), (0,2,3), (0,3,4)...
         for (let k = 1; k < cantos.length - 1; k++) {
           adicionarTriangulo([cantos[0], cantos[k], cantos[k + 1]],
-            posicoes, texturas, normais, vertices, indices, cache);
+            posicoes, texturas, normais, vertices, indices, cache, material, materiais[material] || [1, 1, 1]);
         }
       }
-      // outras etiquetas (o, g, s, usemtl, mtllib) são ignoradas
+      // outras etiquetas (o, g, s, mtllib) são ignoradas
     } catch (erro) {
       throw new Error(`${nome}, linha ${i + 1}: não consegui ler '${linha}' (${erro.message})`);
     }
@@ -91,7 +119,7 @@ export function lerObj(texto, nome = 'obj') {
   return { vertices: new Float32Array(vertices.flat()), indices: new Uint32Array(indices) };
 }
 
-function adicionarTriangulo(cantos, posicoes, texturas, normais, vertices, indices, cache) {
+function adicionarTriangulo(cantos, posicoes, texturas, normais, vertices, indices, cache, material, cor) {
   // Se algum canto não tem normal, calcula a normal do triângulo (produto vetorial)
   let normalFace = null;
   if (cantos.some(([, , vni]) => vni === null)) {
@@ -102,7 +130,7 @@ function adicionarTriangulo(cantos, posicoes, texturas, normais, vertices, indic
   }
 
   for (const [vi, vti, vni] of cantos) {
-    const chave = `${vi}/${vti}/${vni}`;
+    const chave = `${vi}/${vti}/${vni}/${material}`;   // o material faz parte da chave: cores diferentes não se misturam
     if (vni !== null && cache.has(chave)) {   // vértice igual já existe: reaproveita
       indices.push(cache.get(chave));
       continue;
@@ -115,7 +143,7 @@ function adicionarTriangulo(cantos, posicoes, texturas, normais, vertices, indic
 
     indices.push(vertices.length);
     if (vni !== null) cache.set(chave, vertices.length);
-    vertices.push([...pos, ...nor, ...uv]);
+    vertices.push([...pos, ...nor, ...uv, ...cor]);
   }
 }
 
@@ -143,7 +171,20 @@ export function centralizar(vertices) {
 export async function carregarObj(gl, url, { centralizar: deveCentralizar = false } = {}) {
   const resposta = await fetch(url);
   if (!resposta.ok) throw new Error(`Não consegui ler ${url} (${resposta.status})`);
-  const { vertices, indices } = lerObj(await resposta.text(), String(url));
+  const texto = await resposta.text();
+
+  // cores: o .obj aponta para um .mtl na mesma pasta (se não achar, o modelo fica branco)
+  let materiais = {};
+  const arquivoMtl = nomeDoMtl(texto);
+  if (arquivoMtl) {
+    try {
+      const respostaMtl = await fetch(new URL(arquivoMtl, url));
+      if (respostaMtl.ok) materiais = lerMtl(await respostaMtl.text());
+    } catch (erro) {
+      console.warn(`[OBJ] não consegui ler ${arquivoMtl}: o modelo usa cor única`, erro);
+    }
+  }
+  const { vertices, indices } = lerObj(texto, String(url), materiais);
   if (deveCentralizar) centralizar(vertices);
   console.log(`[OBJ] ${url}: ${vertices.length / FLOATS_POR_VERTICE} vértices, ${indices.length / 3} triângulos`);
   return new Mesh(gl, vertices, indices);

@@ -4,6 +4,7 @@ precision highp float;
 in vec3 vPosMundo;
 in vec3 vNormal;
 in vec2 vUV;
+in vec3 vCor;
 
 uniform vec3 uCor;       // cor do material
 uniform vec3 uCamPos;    // posição da câmera (para o brilho especular)
@@ -16,6 +17,7 @@ uniform float uUsaNeblina; // 0.0 para o céu (sol e planetas distantes não som
 uniform float uSemLuz;   // 1.0 = objeto que emite luz própria (estrelas, partículas)
 uniform float uAmbiente; // quanto de luz ambiente o material recebe
 uniform sampler2D uTextura;   // a textura (imagem "colada" no objeto)
+uniform float uUsaCorVertice; // 1.0 = usa a cor de cada vértice (do .mtl) multiplicada por uCor
 uniform float uUsaTextura;    // 1.0 = cor vem da textura; 0.0 = cor sólida (uCor)
 
 // Luz 1: HOLOFOTE preso à nave (cone de luz apontando para frente)
@@ -60,7 +62,8 @@ void main() {
 
     // AMBIENTE: luz de fundo constante (o espaço nunca é preto total)
     // cor-base do pixel: lida da textura (usando o UV) ou a cor sólida do material
-    vec3 base = (uUsaTextura > 0.5) ? texture(uTextura, vUV).rgb : uCor;
+    vec3 base = (uUsaTextura > 0.5) ? texture(uTextura, vUV).rgb
+              : (uUsaCorVertice > 0.5) ? vCor * uCor : uCor;
     vec3 cor = uAmbiente * base;
 
     // SOL: sem atenuação, vem sempre da mesma direção

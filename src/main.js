@@ -1,11 +1,12 @@
 /**
  * Jogo 3D - Shooter em trilhos (WebGL2)
  *
- * Controles:  WASD ou setas = mover a nave   |   ESPAÇO = atirar   |   ESC = pausar / continuar   |   R ou Enter = reiniciar (após o game over)   |   M = menu
+ * Controles:  WASD ou setas = mover a nave   |   ESPAÇO = atirar   |   ESC = pausar / continuar   |   N = música   |   R ou Enter = reiniciar (após o game over)   |   M = menu
  */
 import { ajustarCanvas } from './canvas.js';
 import { Jogo } from './jogo.js';
 import { Menu } from './menu.js';
+import { Musica } from './musica.js';
 import { Teclado } from './input.js';
 import { criarCubo, criarEsfera } from './mesh.js';
 import { carregarObj } from './objLoader.js';
@@ -55,20 +56,36 @@ async function iniciar() {
   const jogo = new Jogo(gl, recursos, new Teclado());
   const menu = new Menu(jogo);          // o jogo abre no menu (jogo.modo === 'menu')
 
+  // Música de fundo (gerada por código). O navegador só libera o áudio depois de um gesto do jogador.
+  const musica = new Musica();
+  const avisoMusica = document.getElementById('musica');
+  const mostrarMusica = () => { avisoMusica.textContent = `♪ música: ${musica.mudo ? 'desligada' : 'ligada'} (N)`; };
+  jogo.aoMudarEstado = (estado) => musica.modo(estado, estado === 'jogo' ? jogo.cfg.bpm : undefined);
+  const primeiroGesto = () => {
+    musica.iniciar();
+    musica.modo(jogo.modo === 'menu' ? 'menu' : 'jogo', jogo.modo === 'menu' ? undefined : jogo.cfg.bpm);
+  };
+  window.addEventListener('keydown', primeiroGesto, { once: true });
+  window.addEventListener('pointerdown', primeiroGesto, { once: true });
+  mostrarMusica();
+
   let pausado = false;
   const avisoPausa = document.getElementById('pausa');
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyN' && !e.repeat) { musica.alternar(); mostrarMusica(); }   // liga/desliga a música em qualquer tela
     if (jogo.modo !== 'jogando') return;        // no menu, quem trata o teclado é o Menu
     if ((e.code === 'KeyR' || e.code === 'Enter') && jogo.terminou) jogo.reiniciar();
     if (e.code === 'KeyM' && (pausado || jogo.terminou)) {    // volta ao menu
       pausado = false;
       avisoPausa.hidden = true;
+      musica.pausar(false);
       jogo.irParaMenu();
       menu.abrir();
     }
     if (e.code === 'Escape' && !e.repeat) {
       pausado = !pausado;
       avisoPausa.hidden = !pausado;
+      musica.pausar(pausado);                   // a música também pausa
     }
   });
 

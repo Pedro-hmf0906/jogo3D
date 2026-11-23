@@ -1,13 +1,14 @@
 /**
  * Mesh = a "malha" de um modelo 3D: vértices + índices guardados na placa de vídeo.
  *
- * Cada vértice tem 8 números:
- *     posição (x, y, z) | normal (nx, ny, nz) | textura (u, v)
+ * Cada vértice tem 11 números:
+ *     posição (x, y, z) | normal (nx, ny, nz) | textura (u, v) | cor (r, g, b)
  * A normal indica para onde a superfície "aponta" (usada na iluminação).
  * O (u, v) diz qual ponto da imagem de textura cai naquele vértice.
+ * A cor por vértice vem do arquivo .mtl do modelo (branco quando o modelo não tem cor).
  * O leitor de OBJ (objLoader.js) gera exatamente esses mesmos arrays.
  */
-export const FLOATS_POR_VERTICE = 8;
+export const FLOATS_POR_VERTICE = 11;
 
 export class Mesh {
   constructor(gl, vertices, indices) {
@@ -39,6 +40,9 @@ export class Mesh {
     // atributo 2: coordenadas de textura
     gl.vertexAttribPointer(2, 2, gl.FLOAT, false, passo, 6 * tam);
     gl.enableVertexAttribArray(2);
+    // atributo 3: cor do vértice (vinda do .mtl)
+    gl.vertexAttribPointer(3, 3, gl.FLOAT, false, passo, 8 * tam);
+    gl.enableVertexAttribArray(3);
 
     gl.bindVertexArray(null);
   }
@@ -81,7 +85,7 @@ export function criarCubo(gl) {
       canto(centro, u, v, +0.5, +0.5),
       canto(centro, u, v, -0.5, +0.5),
     ];
-    cantos.forEach((c, k) => vertices.push(...c, ...n, ...uvs[k]));
+    cantos.forEach((c, k) => vertices.push(...c, ...n, ...uvs[k], 1, 1, 1));   // + cor branca (sem cor própria)
     const base = i * 4;
     indices.push(base, base + 1, base + 2, base + 2, base + 3, base);
   });
@@ -105,7 +109,7 @@ export function criarEsfera(gl, setores = 48, aneis = 24) {
       const x = Math.sin(theta) * Math.cos(phi);
       const y = Math.cos(theta);
       const z = Math.sin(theta) * Math.sin(phi);
-      vertices.push(x, y, z, x, y, z, i / setores, j / aneis);   // posição = normal (raio 1)
+      vertices.push(x, y, z, x, y, z, i / setores, j / aneis, 1, 1, 1);   // posição = normal (raio 1); + cor branca (sem cor própria)
     }
   }
   for (let j = 0; j < aneis; j++) {

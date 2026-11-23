@@ -95,7 +95,9 @@ export class Menu {
 
     const d = DIFICULDADES[this.jogo.dificuldade];
     this.nomeDif.textContent = d.nome;
-    this.infoDif.textContent =
+    // duas linhas: a travessia (tempo e ritmo) e o resto das regras
+    this.infoDif.innerHTML =
+      `${d.duracao} s de travessia · ritmo ${d.ritmo}<br>` +
       `${d.vidas} vidas · ${d.asteroides} asteroides · bateria de ${d.cargasMax} tiros (recarga de ${d.tempoRecarga} s) · pontos ×${d.mult}`;
   }
 }
