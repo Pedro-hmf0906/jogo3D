@@ -24,6 +24,26 @@ import {
 const aleatorio = (min, max) => min + Math.random() * (max - min);
 const unitario = (v) => { const n = Math.hypot(...v); return v.map((c) => c / n); };
 
+
+/**
+ * Converte um deslocamento relativo à nave em
+ * uma posição do mundo, considerando sua inclinação.
+ *
+ * Os deslocamentos já estão nas unidades do jogo,
+ * após a escala 0.8 e a rotação de 180° em Y.
+ */
+function pontoNaNave(nave, dx, dy, dz) {
+  const c = Math.cos(nave.inclinacao);
+  const s = Math.sin(nave.inclinacao);
+
+  return [
+    nave.pos[0] + dx * c - dy * s,
+    nave.pos[1] + dx * s + dy * c,
+    nave.pos[2] + dz,
+  ];
+}
+
+
 // ---------- O CÉU ----------
 // Tudo isto é fixo no mundo e MUITO longe. Com o progresso da fase, cada corpo se aproxima
 // "aproxima" unidades (pouco), então cresce quase imperceptivelmente.
@@ -204,36 +224,87 @@ export class Jogo {
     this.atualizarEfeitos(dt);
   }
 
+  
   /**
-   * Chama dos dois motores: a cada quadro saem partículas de trás da nave, que são levadas
-   * para trás (+Z). Como cada partícula fica onde nasceu, o rastro "entorta" quando a nave
-   * vira. Ao pousar na nave-mãe (freio -> 0) a chama diminui.
+   * Chamas dos quatro motores da X-wing.
+   * Cada motor emite partículas que se afastam em +Z.
    */
   emitirChama(dt) {
-    this.chamaAcc += dt * 80 * (0.35 + 0.65 * this.freio);
-    const [x, y, z] = this.nave.pos;
+    // Quatro motores, mantendo uma quantidade moderada
+    // de partículas para preservar o desempenho.
+    this.chamaAcc += dt * 55 * (0.35 + 0.65 * this.freio);
+
+    const motores = [
+      [-0.33,  0.20], // superior esquerdo
+      [ 0.33,  0.20], // superior direito
+      [-0.33, -0.20], // inferior esquerdo
+      [ 0.33, -0.20], // inferior direito
+    ];
+
     while (this.chamaAcc >= 1 && this.particulas.length < 700) {
       this.chamaAcc -= 1;
-      for (const lado of [-1, 1]) {
+
+      for (const [mx, my] of motores) {
+        const origem = pontoNaNave(
+          this.nave,
+          mx,
+          my,
+          1.10,
+        );
+
         const vida = aleatorio(0.25, 0.45);
+
         this.particulas.push({
-          pos: [x + lado * 0.42 + aleatorio(-0.06, 0.06), y - 0.05 + aleatorio(-0.06, 0.06), z + 0.95],
-          vel: [aleatorio(-0.5, 0.5), aleatorio(-0.5, 0.5), aleatorio(5, 9)],
-          vida, vidaMax: vida, tamanho: aleatorio(0.1, 0.2), cor: null,   // cor null = gradiente de fogo
+          pos: [
+            origem[0] + aleatorio(-0.025, 0.025),
+            origem[1] + aleatorio(-0.025, 0.025),
+            origem[2],
+          ],
+
+          vel: [
+            aleatorio(-0.4, 0.4),
+            aleatorio(-0.4, 0.4),
+            aleatorio(5, 9),
+          ],
+
+          vida,
+          vidaMax: vida,
+          tamanho: aleatorio(0.08, 0.14),
+          cor: null,
         });
       }
     }
-    if (this.chamaAcc > 5) this.chamaAcc = 0;    // depois de uma pausa longa, não solta uma rajada enorme
+
+    if (this.chamaAcc > 5) {
+      this.chamaAcc = 0;
+    }
   }
 
-  /** Dispara um projétil: sai de um dos dois canhões (nas asas), alternando. */
+
+  
+  /** Dispara alternadamente dos dois canhões superiores. */
   atirar() {
     this.canhao = -this.canhao;
-    const [x, y, z] = this.nave.pos;
-    this.tiros.push({ pos: [x + this.canhao * 0.8, y, z - 1.2], morto: false });
+
+    // Posição alinhada à ponta do canhão superior.
+    // O centro do feixe fica à frente da ponta
+    // porque seu cubo possui comprimento 1.4.
+    const pos = pontoNaNave(
+      this.nave,
+      this.canhao * 1.06,
+      0.38,
+      -1.30,
+    );
+
+    this.tiros.push({
+      pos,
+      morto: false,
+    });
+
     this.recarga = INTERVALO_TIRO;
     this.carga -= 1;
   }
+
 
   /**
    * Move os projéteis e testa se acertaram algum asteroide (esfera contra esfera, como na

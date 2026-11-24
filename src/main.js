@@ -38,7 +38,7 @@ async function iniciar() {
     const [shader, malhaNave, ...malhasAsteroides] = await Promise.all([
       Shader.carregar(gl, new URL('phong.vert', SHADERS), new URL('phong.frag', SHADERS)),
       // Modelos carregados pelo NOSSO leitor de OBJ
-      carregarObj(gl, new URL('craft_speederD.obj', MODELOS), { centralizar: true }),
+      carregarObj(gl, new URL('xwing.obj', MODELOS), { centralizar: true }),
       ...['meteor_detailed.obj', 'rock_largeA.obj', 'rock_crystals.obj'].map(
         (nome) => carregarObj(gl, new URL(nome, MODELOS), { centralizar: true })),
     ]);
