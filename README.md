@@ -12,12 +12,19 @@ são código da equipe).
 | 🖥️ Slides | *[LINK DOS SLIDES]* |
 | 🎬 Vídeo de demonstração | *[LINK DO VÍDEO]* |
 
-## História
+## 5. Operação Aurora — O Retorno
 
-Ano 2387. Thalassa, um mundo de oceanos, está ficando sem energia. Você pilota a **Falcão-1**, a única nave veloz
-o bastante para cruzar o Cinturão de Kepler, um campo de rochas e cristais instáveis. Desvie dos asteroides,
-destrua o que puder com a bateria de tiros (que recarrega devagar) e **pouse no hangar da nave-mãe Aurora**
-antes que as luzes de Thalassa se apaguem.
+Durante uma missão de exploração em um sistema planetário desconhecido, a nave-mãe Aurora foi surpreendida por uma tempestade de partículas que interrompeu suas comunicações com as pequenas naves de reconhecimento.
+
+A Falcão-1 conseguiu atravessar a região mais instável da tempestade, mas acabou isolada do restante da frota.
+
+Com os sistemas de navegação parcialmente comprometidos e uma reserva limitada de energia, você recebe um último sinal de localização da Aurora.
+
+Entre sua posição e a nave-mãe existe um extenso cinturão de asteroides, formado pelos fragmentos de antigos corpos celestes.
+
+A única possibilidade de retorno é atravessar esse caminho e alcançar o hangar da Aurora antes que o sinal desapareça.
+
+Não há uma segunda rota. Apenas você, sua nave e o espaço desconhecido.
 
 ## Como rodar (tutorial)
 
