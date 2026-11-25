@@ -1,4 +1,4 @@
-# Rumo a Thalassa — Shooter 3D em WebGL
+# Operação Aurora — O Retorno | Jogo 3D em WebGL
 
 Jogo 3D de nave em trilhos (estilo *Star Fox*), feito com **WebGL2 puro** e JavaScript, **sem nenhuma
 biblioteca** (nem three.js, nem de matemática: as matrizes, o leitor de OBJ, os shaders, as texturas e a música
