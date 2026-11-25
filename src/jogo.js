@@ -531,6 +531,7 @@ export class Jogo {
     shader.setFloat('uUsaNeblina', 1);
     shader.setInt('uTextura', 0);        // a textura fica na unidade 0
     shader.setFloat('uUsaCorVertice', 0);
+    shader.setFloat('uEmissaoMotor', 0);
 
     this.desenharCeu();
 
@@ -549,9 +550,23 @@ export class Jogo {
       shader.setVec3('uCor', [1, 1, 1]);
       shader.setFloat('uUsaCorVertice', 1);
       shader.setFloat('uAmbiente', 0.32);   // a câmera vê a nave por trás: um pouco mais de luz de fundo
-      shader.setFloat('uBrilho', 60);       // brilho metálico
+      
+      shader.setFloat('uBrilho', 60);
       shader.setFloat('uKs', 0.8);
+
+      // Brilho pulsante dos motores.
+      // Diminui durante a frenagem após a vitória.
+      const pulsoMotor =
+        (0.75 + 0.25 * Math.sin(this.tempo * 8)) *
+        this.freio;
+
+      shader.setFloat('uEmissaoMotor', pulsoMotor);
+
       this.malhaNave.desenhar();
+
+      // Desativa a emissão para os outros objetos.
+      shader.setFloat('uEmissaoMotor', 0);
+
       shader.setFloat('uUsaCorVertice', 0);
       shader.setFloat('uAmbiente', 0.2);
     }

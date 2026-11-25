@@ -19,6 +19,7 @@ uniform float uAmbiente; // quanto de luz ambiente o material recebe
 uniform sampler2D uTextura;   // a textura (imagem "colada" no objeto)
 uniform float uUsaCorVertice; // 1.0 = usa a cor de cada vértice (do .mtl) multiplicada por uCor
 uniform float uUsaTextura;    // 1.0 = cor vem da textura; 0.0 = cor sólida (uCor)
+uniform float uEmissaoMotor;
 
 // Luz 1: HOLOFOTE preso à nave (cone de luz apontando para frente)
 uniform vec3 uHoloPos;
@@ -78,12 +79,28 @@ void main() {
     float attH = 1.0 / (1.0 + 0.01 * dh + 0.0015 * dh * dh);
     cor += cone * attH * phong(N, V, Lh, uHoloCor, base);
 
-    // EXPLOSÃO: pontual, enfraquece rápido com a distância
+    
+    // EXPLOSÃO: luz pontual
     vec3 Le = uExplPos - vPosMundo;
     float de = length(Le);
     Le = Le / de;
+
     float attE = 1.0 / (1.0 + 0.05 * de * de);
     cor += attE * phong(N, V, Le, uExplCor, base);
 
-    FragColor = vec4(mix(cor, uFundo, neblina), 1.0);
+    // Brilho emissivo dos motores da X-wing
+    if (uEmissaoMotor > 0.0 && uUsaCorVertice > 0.5) {
+        vec3 corMaterialMotor = vec3(0.83, 0.25, 0.32);
+
+        if (distance(vCor, corMaterialMotor) < 0.02) {
+            vec3 emissao = vec3(0.70, 0.18, 0.10);
+            cor += emissao * uEmissaoMotor;
+        }
+    }
+
+    FragColor = vec4(
+        mix(cor, uFundo, neblina),
+        1.0
+    );
 }
+
