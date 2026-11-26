@@ -444,12 +444,13 @@ export class Jogo {
     if (hud) hud.textContent = `Vidas: ${'♥'.repeat(Math.max(0, this.vidas))}   ·   Pontos: ${this.pontos}   ·   Batidas: ${this.colisoes}`;
     if (fim) {
       fim.hidden = !this.fimDeJogo;
-      if (this.fimDeJogo) fim.innerHTML = `GAME OVER<small>Pontos: ${this.pontos}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
+
+      if (this.fimDeJogo) {fim.innerHTML = `MISSÃO FRACASSADA<small>Sinal da Falcão-1 perdido.<br><br>Pontos: ${this.pontos} ·Batidas: ${this.colisoes} ·${this.cfg.nome}<br>Pressione R ou Enter para jogar de novo · M para o menu</small>`;}
     }
     if (vit) {
       vit.hidden = !this.vitoria;
       if (this.vitoria) {
-        vit.innerHTML = `VITÓRIA!<small>Pouso concluído na nave-mãe Aurora<br>Pontos: ${this.pontos} · Vidas restantes: ${this.vidas} · Batidas: ${this.colisoes} · ${this.cfg.nome}<br>pressione R ou Enter para jogar de novo · M para o menu</small>`;
+        vit.innerHTML = `MISSÃO CONCLUÍDA<small>Falcão-1 a bordo da Aurora.<br>Bem-vindo de volta, piloto!<br><br>Pontos: ${this.pontos} ·Vidas restantes: ${this.vidas} ·Batidas: ${this.colisoes} ·${this.cfg.nome}<br>Pressione R ou Enter para jogar de novo · M para o menu</small>`;
       }
     }
   }
@@ -477,7 +478,7 @@ export class Jogo {
     this.pctMostrado = pct;
     const texto = document.getElementById('pct');
     const barra = document.getElementById('barraCheia');
-    if (texto) texto.textContent = pct >= 100 ? 'POUSO!' : `Nave-mãe: ${pct}%`;
+    if (texto) {texto.textContent = pct >= 100? 'POUSANDO NA AURORA': `Rumo à Aurora: ${pct}%`;}
     if (barra) barra.style.width = `${pct}%`;
   }
 
